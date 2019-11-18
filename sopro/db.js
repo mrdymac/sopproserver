@@ -27,7 +27,8 @@ var usersSchema = new mongoose.Schema({
    senha: String,
    carteira: Array ,
    id_plano: String,
-   validade: Date
+   validade: Date,
+   normalized: String
 }, { collection: 'users' }
 );
 
