@@ -11,6 +11,66 @@ var mongo = require('mongodb');
    GET PAGINADA
    GET BY LIKE NOME
 */ 
+
+router.post('/save',function(req,res){
+   var db = require("../db");
+   var n=req.body.nome;
+   //var ticker=req.body.ticker;
+   var lo=req.body.logo;
+   var Empresas = db.Mongoose.model('empresas', db.EmpresasSchema, 'empresas');
+   var empresa=new Empresas({_id:new mongo.ObjectID(),nome:n,logo:lo,recomendacoes:[{}]});
+   empresa.save(function (err) {
+      if (err) {
+          console.log("Error! " + err.message);
+          return err;
+      }
+      else {
+          console.log("Post saved");
+        res.redirect("/empresas?page=1");
+      }
+   });
+});
+router.post('/ticker/save',function(req,res){
+   var db = require("../db");
+   var cod=req.body.codigo;
+   var id=req.body.empresa;  
+   var Empresas = db.Mongoose.model('empresas', db.EmpresasSchema, 'empresas');
+   Empresas.findOne({_id:new mongo.ObjectId(id)}).lean().exec((e,empresa)=>{
+      empresa.tickers.push({codigo:cod,cotacoes:[]});
+      Empresas.findOneAndUpdate({_id:new mongo.ObjectId(id)},{tickers:empresa.tickers},
+       {upsert:true}, function(err, doc){
+         if (err)
+          return res.send(500, { error: err });
+         return res.send("succesfully saved");
+       });
+   });
+   
+});
+router.post('/ticker/cotacoes/save',function(req,res){
+   var db = require("../db");
+   var id=req.body.empresa;
+   var cod=req.body.codigo;
+   var dat=req.body.data;
+   var valor=req.body.valor.replace(',','.');  
+   var div=req.body.dividendo.replace(',','.');  
+   var Empresas = db.Mongoose.model('empresas', db.EmpresasSchema, 'empresas');
+  Empresas.findOne({_id:new mongo.ObjectId(id)}).lean().exec(
+     function(i,emp){
+        var tt=[];
+         emp.tickers.forEach(t=>{
+               if(t.codigo==cod){
+                  t.cotacoes.push({data:dat,fechamento:parseFloat(valor),dividendo:parseFloat(div)});
+                  tt=t;
+               }
+         });
+         Empresas.findOneAndUpdate({_id:new mongo.ObjectId(id)},{tickers:tt},
+         {upsert:true}, function(err, doc){
+           if (err)
+            return res.send(500, { error: err });
+           return res.send("succesfully saved");
+         });
+  });
+});
 router.get('/', function(req, res) {
    var db = require("../db");
    var lastid=req.query.id;
@@ -54,12 +114,15 @@ router.get('/cotacoes', function(req, res) {
          docs[0].tickers.forEach(t=>{
             if(t.codigo==ticker)
                t.cotacoes.forEach(cotacao=>{
-               lista.push({data: getDataFormatada(cotacao.data), values:cotacao.fechamento});   
+               lista.push({data: getDataFormatada(cotacao.data), values:parseFloat(cotacao.fechamento)});   
             });
          });
          res.status(200).send(lista);               
         });
 });
+
+
+
 router.get('/recomendacoes', function(req, res) {
    var db = require("../db");
    var lastid=req.query.id; 
@@ -68,7 +131,7 @@ router.get('/recomendacoes', function(req, res) {
       function (e, docs) {   
          var lista=[];
          docs[0].recomendacoes.forEach(rec=>{
-            lista.push({data: getDataFormatada(rec.data), id:rec._id});   
+            lista.push({data:getDataFormatada(rec.data), id:rec._id});   
             
          });
          res.status(200).send(lista);               
@@ -85,8 +148,8 @@ function getCurrencyMode(valor){
        return "R$ "+moeda[0]+",00";
 }
 function getDataFormatada(valor){   
-   var data=valor.toISOString().substr(0,10);
-  return data.substr(8,2)+"/"+data.substr(5,2)+"/"+data.substr(0,4)
+   var data=valor;//.toISOString().substr(0,10);
+  return data.substr(6,2)+"/"+data.substr(4,2)+"/"+data.substr(0,4)
 }
 module.exports = router;
 

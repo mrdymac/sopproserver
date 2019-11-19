@@ -6,6 +6,41 @@ var mongo = require('mongodb');
 //   res.render('index', { title: 'Express' });
 // });
 
+router.post('/save',function(req,res){
+    var db = require("../db");
+    var recom=req.body.recomendacao;
+    var id=req.body.empresa;  
+    var url=req.body.url;
+    var texto=req.body.texto;
+    var dat=req.body.data;
+    var disc=req.body.disclaimer;
+
+    var indicadores=req.body.dados_indicadores;
+    var rec_data=req.body.dados_recomendacao;
+    var Empresas = db.Mongoose.model('empresas', db.EmpresasSchema, 'empresas');
+    Empresas.findOne({_id:new mongo.ObjectId(id)}).lean().exec((e,empresa)=>{
+       empresa.recomendacoes.push({
+            _id:new mongo.ObjectId(),
+            recomendacao:recom,
+            url_podcast:url,
+            texto:texto,
+            autor:disc,
+            data:dat,
+            dados_indicadores:JSON.parse(indicadores),
+            dados_recomendacao:JSON.parse(rec_data)
+       });
+
+
+       Empresas.findOneAndUpdate({_id:new mongo.ObjectId(id)},{recomendacoes:empresa.recomendacoes},
+        {upsert:true}, function(err, doc){
+          if (err)
+           return res.send(500, { error: err });
+          return res.send("succesfully saved");
+        });
+    });
+    
+ });
+
 /* GET Userlist page. 
    GET BY ID,
    GET PAGINADA
@@ -21,13 +56,18 @@ router.get('/', function(req, res) {
    Empresas.find({_id: new mongo.ObjectID(idEmpresa)}).lean().exec(
        function (i,emps){
         var lista=[];
+        if(emps.length==0){
+            res.send([]);
+            return;
+        }
+            
            emps[0].recomendacoes.forEach(rec => {
                 reco={
                    id:rec._id,
                    logo: emps[0].logo,
                    recomendacao:rec.recomendacao,
                    url_podcast:rec.url_podcast,
-                   dados_recomendacao:[],
+                   dados_recomendacao:rec.dados_recomendacao,
                    empresa:emps[0].nome,                   
                    texto:rec.texto,
                    dados_indicadores:rec.dados_indicadores,
@@ -35,9 +75,7 @@ router.get('/', function(req, res) {
                    disclaimer: rec.autor,
                    inicio_acomp: inicioAcomp.substr(8,2)+"/"+inicioAcomp.substr(5,2)+"/"+inicioAcomp.substr(0,4)
                };
-               rec.dados_recomendacao.forEach((a)=>{
-                    reco.dados_recomendacao.push({label:a.label,values:a.value});
-               });
+               
                lista.push(reco);
                if(id!=undefined && reco.id.toString()==id){
                     res.status(200).send(reco);
@@ -73,8 +111,8 @@ function getCurrencyMode(valor){
         return "R$ "+moeda[0]+",00";
 }
 function getDataFormatada(valor){   
-    var data=valor.toISOString().substr(0,10);
-   return data.substr(8,2)+"/"+data.substr(5,2)+"/"+data.substr(0,4)
+    var data=valor;//.toISOString().substr(0,10);
+    return data.substr(6,2)+"/"+data.substr(4,2)+"/"+data.substr(0,4)
 }
 module.exports = router;
 

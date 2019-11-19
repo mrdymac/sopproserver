@@ -26,10 +26,14 @@ var usersSchema = new mongoose.Schema({
    token: String,
    senha: String,
    carteira: Array ,
-   id_plano: String,
+   idPlano: String,
    validade: Date,
    normalized: String
 }, { collection: 'users' }
 );
-
-module.exports = { Mongoose: mongoose, EmpresasSchema: empresasSchema, UsersSchema:usersSchema }
+var planoSchema=new mongoose.Schema({
+    _id:Schema.Types.ObjectId,
+    num_empresas: String,
+    codigo: String
+});
+module.exports = { Mongoose: mongoose, EmpresasSchema: empresasSchema, UsersSchema:usersSchema, PlanoSchema: planoSchema }
