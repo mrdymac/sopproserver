@@ -15,7 +15,7 @@ router.post("/signin",function(req,res){
       }
       else {
           console.log("Post saved");
-        res.send("updated");
+        res.send("[{\"ok\":\"saved\"}]");
       }
   });
 });
@@ -23,24 +23,32 @@ router.post("/signin",function(req,res){
 router.get('/plano', function(req, res, next) {
   var db = require("../db");
   var e=req.query.email;
+  
   var Users = db.Mongoose.model('users', db.UsersSchema, 'users');
   var Planos = db.Mongoose.model('planos', db.PlanoSchema, 'planos');
   Users.findOne({email:e}).lean().exec(
     function (a,b){
       
       if(b.idPlano!=null && b.idPlano!=undefined && b.idPlano!="" ){
-        Planos.findOne({_id:new mongo.ObjectID(b.idPlano)}).lean().exec((c,plano)=>{
+        Planos.find({_id:b.idPlano}).lean().exec((c,plano)=>{
+          if(plano[0]._id!=undefined){
           var p={
             id:b.idPlano,
-            codigo:plano.codigo,
-            num_empresas:plano.num_empresas,
+            codigo:plano[0].codigo,
+            num_empresas:plano[0].num_empresas,
             validade:b.validade
           };
-          res.send(p);
+          res.send([p]);
+         
+        }else
+        res.send([]);
         });
-      
+        
+    }else{
+      res.send([]);
     }
-    }
+    
+}
   );
   
 });

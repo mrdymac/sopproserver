@@ -18,7 +18,7 @@ router.post('/save',function(req,res){
    //var ticker=req.body.ticker;
    var lo=req.body.logo;
    var Empresas = db.Mongoose.model('empresas', db.EmpresasSchema, 'empresas');
-   var empresa=new Empresas({_id:new mongo.ObjectID(),nome:n,logo:lo,recomendacoes:[{}]});
+   var empresa=new Empresas({_id:new mongo.ObjectID(),nome:n,logo:lo,recomendacoes:[{}],normalized:n.toLowerCase()});
    empresa.save(function (err) {
       if (err) {
           console.log("Error! " + err.message);
@@ -26,7 +26,7 @@ router.post('/save',function(req,res){
       }
       else {
           console.log("Post saved");
-        res.redirect("/empresas?page=1");
+        res.redirect("/empresas?page=1&id="+empresa._id);
       }
    });
 });
@@ -67,7 +67,7 @@ router.post('/ticker/cotacoes/save',function(req,res){
          {upsert:true}, function(err, doc){
            if (err)
             return res.send(500, { error: err });
-           return res.send("succesfully saved");
+           return res.send("[{\"ok\":\"saved\"}]");
          });
   });
 });
@@ -75,45 +75,71 @@ router.get('/', function(req, res) {
    var db = require("../db");
    var lastid=req.query.id;
    var pag=req.query.page;    
-   var name=req.query.nome;  
+   var name=req.query.nome;
+   var em=req.query.email;
+   var tok=req.query.token;
+   var Users = db.Mongoose.model('users', db.UsersSchema, 'users');
    var Empresas = db.Mongoose.model('empresas', db.EmpresasSchema, 'empresas');
    let limit=10;
-   var skip=limit *(pag-1);
+   var skip=0;   
+      
+   skip=limit *(pag-1);
    var query={};
    if((lastid==undefined || lastid=="") && name!="" && name!=undefined)
       query={normalized:new RegExp(name.toLowerCase())};
    else if(lastid!=undefined && lastid!="")
       query={_id:new mongo.ObjectID(lastid)};
-   Empresas.find(query).skip(skip).lean().exec(
+        
+   Empresas.find(query).skip(skip).limit(limit).sort().lean().exec(
       function (e, docs) {
-         var ff="";
          var lista=[];
          docs.forEach((f)=>{
+            var ff="";
+
                 f.tickers.forEach((g)=>{
                     ff+=g.codigo+",";
                 });
                 f.tickers=ff.substr(0,ff.length-1);
                 f.id=f._id;
-                f.num_recomendacao=f.recomendacoes.length.toString();
+                if(f.recomendacoes[0].dados_recomendacao!=undefined)
+                  f.num_recomendacao=f.recomendacoes.length.toString();
+                else
+                  f.num_recomendacao="0";
                delete(f.recomendacoes);
                delete(f._id);               
                lista.push(f); 
             });
-         res.status(200).send(lista);
-               
+            if(lastid==undefined)
+            Users.findOne({email:em,token:tok}).lean().exec(
+                  function (e, users) { 
+                     var lista2=[];
+                     var listauser=[];
+                     if(users!=null){
+                     users.carteira.forEach((cart)=>{listauser.push(cart.id_empresa.toString())});
+                     lista.forEach((item)=>{
+                       
+                           if(!listauser.includes(item.id.toString()))
+                           lista2.push(item);
+                        
+                     });
+                  }
+                     res.status(200).send(lista2);
+                  }) 
+             else 
+                res.status(200).send(lista);    
         });
 });
 router.get('/cotacoes', function(req, res) {
    var db = require("../db");
    var lastid=req.query.id;  
-   var ticker=req.query.ticker;  
+  // var ticker=req.query.ticker;  
    var Empresas = db.Mongoose.model('empresas', db.EmpresasSchema, 'empresas');
    Empresas.find({_id:new mongo.ObjectID(lastid)}).lean().exec(
       function (e, docs) {   
          var lista=[];
-         docs[0].tickers.forEach(t=>{
-            if(t.codigo==ticker)
+         docs[0].tickers.forEach(t=>{            
                t.cotacoes.forEach(cotacao=>{
+                  if(cotacao.data!=undefined)
                lista.push({data: getDataFormatada(cotacao.data), values:parseFloat(cotacao.fechamento)});   
             });
          });
@@ -131,6 +157,7 @@ router.get('/recomendacoes', function(req, res) {
       function (e, docs) {   
          var lista=[];
          docs[0].recomendacoes.forEach(rec=>{
+            if(rec._id!=undefined)
             lista.push({data:getDataFormatada(rec.data), id:rec._id});   
             
          });

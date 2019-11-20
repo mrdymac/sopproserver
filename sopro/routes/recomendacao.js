@@ -14,6 +14,7 @@ router.post('/save',function(req,res){
     var texto=req.body.texto;
     var dat=req.body.data;
     var disc=req.body.disclaimer;
+    var tic=req.body.ticker;
 
     var indicadores=req.body.dados_indicadores;
     var rec_data=req.body.dados_recomendacao;
@@ -27,7 +28,8 @@ router.post('/save',function(req,res){
             autor:disc,
             data:dat,
             dados_indicadores:JSON.parse(indicadores),
-            dados_recomendacao:JSON.parse(rec_data)
+            dados_recomendacao:JSON.parse(rec_data),
+            ticker:tic
        });
 
 
@@ -62,6 +64,7 @@ router.get('/', function(req, res) {
         }
             
            emps[0].recomendacoes.forEach(rec => {
+               if(rec._id!=undefined){
                 reco={
                    id:rec._id,
                    logo: emps[0].logo,
@@ -69,8 +72,10 @@ router.get('/', function(req, res) {
                    url_podcast:rec.url_podcast,
                    dados_recomendacao:rec.dados_recomendacao,
                    empresa:emps[0].nome,                   
+                   idEmpresa:emps[0]._id, 
                    texto:rec.texto,
                    dados_indicadores:rec.dados_indicadores,
+                   ticker:rec.ticker,
                    data: getDataFormatada(rec.data),
                    disclaimer: rec.autor,
                    inicio_acomp: inicioAcomp.substr(8,2)+"/"+inicioAcomp.substr(5,2)+"/"+inicioAcomp.substr(0,4)
@@ -78,9 +83,10 @@ router.get('/', function(req, res) {
                
                lista.push(reco);
                if(id!=undefined && reco.id.toString()==id){
-                    res.status(200).send(reco);
+                    res.status(200).send([reco]);
                     return;
-               }               
+               }  
+            }             
            });
            if(id==undefined || id==""){
                 var l=[];
@@ -88,6 +94,7 @@ router.get('/', function(req, res) {
                     l.push({
                         id:item.id,
                         nome:item.empresa,
+                        idEmpresa:item.idEmpresa,
                         ultimo_alvo:getCurrencyMode( item.dados_recomendacao[0].values),
                         ultimo_recomendacao: item.recomendacao,
                         atualizacao:item.data
@@ -95,8 +102,9 @@ router.get('/', function(req, res) {
                     })
                });
                 res.status(200).send(l);
+                return;
            }
-            
+           res.status(200).send(lista);
        }
    );
 })

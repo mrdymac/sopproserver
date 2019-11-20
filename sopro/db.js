@@ -15,6 +15,7 @@ var empresasSchema = new mongoose.Schema({
     _id: Schema.Types.ObjectId,
     logo: String,  
     recomendacoes:Array,
+    normalized:String,
     setor_id:String
 }, { collection: 'empresas' }
 );
