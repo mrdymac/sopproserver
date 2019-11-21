@@ -1,5 +1,5 @@
 var mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost:27017/soprodb');
+mongoose.connect('mongodb://admin:Curtisp40@localhost:27017/soprodb');
 const Schema = mongoose.Schema;
 
 var adminSchema = new mongoose.Schema({
