@@ -60,7 +60,11 @@ router.get('/', function(req, res) {
     let limit=10;
     var skip=limit *(pag-1);
     Users.find({email:e,token:tok}).lean().exec(
-      function (e, docs) {        
+      function (e, docs) {   
+        if(docs[0]!=undefined && docs[0].idPlano==null){
+            res.status(200).send([]);
+            return;
+        }
          var lista=[];
          docs.forEach((f)=>{   
                 var index=0;

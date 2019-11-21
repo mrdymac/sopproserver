@@ -1,5 +1,5 @@
 var mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost:27017/soprodb');
+mongoose.connect('mongodb://admin:Curtisp40@localhost:27017/soprodb');
 const Schema = mongoose.Schema;
 
 var adminSchema = new mongoose.Schema({
@@ -22,7 +22,7 @@ var empresasSchema = new mongoose.Schema({
 
 var usersSchema = new mongoose.Schema({
    _id:Schema.Types.ObjectId,
-   id_notification: String,
+   idNotification: String,
    email:String,
    token: String,
    senha: String,

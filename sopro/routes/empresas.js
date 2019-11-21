@@ -112,6 +112,11 @@ router.get('/', function(req, res) {
             if(lastid==undefined)
             Users.findOne({email:em,token:tok}).lean().exec(
                   function (e, users) { 
+                     if(users!=null && users.idPlano==null){
+                        res.status(200).send([]);
+                        return ;
+                     }
+
                      var lista2=[];
                      var listauser=[];
                      if(users!=null){
