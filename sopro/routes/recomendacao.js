@@ -1,6 +1,9 @@
 var express = require('express');
 var router = express.Router();
 var mongo = require('mongodb');
+var  fcm = require ('fcm-notification') ; 
+var FCM = new fcm ('./path/to/privatekey.json') ; 
+
 /* GET home page. */
 // router.get('/', function(req, res, next) {
 //   res.render('index', { title: 'Express' });
@@ -19,8 +22,9 @@ router.post('/save',function(req,res){
     var indicadores=req.body.dados_indicadores;
     var rec_data=req.body.dados_recomendacao;
     var Empresas = db.Mongoose.model('empresas', db.EmpresasSchema, 'empresas');
+    var Users = db.Mongoose.model('users', db.UsersSchema, 'users');
     Empresas.findOne({_id:new mongo.ObjectId(id)}).lean().exec((e,empresa)=>{
-       empresa.recomendacoes.push({
+        var rec={
             _id:new mongo.ObjectId(),
             recomendacao:recom,
             url_podcast:url,
@@ -30,14 +34,32 @@ router.post('/save',function(req,res){
             dados_indicadores:JSON.parse(indicadores),
             dados_recomendacao:JSON.parse(rec_data),
             ticker:tic
-       });
+       };
+       empresa.recomendacoes.push(rec);
 
 
        Empresas.findOneAndUpdate({_id:new mongo.ObjectId(id)},{recomendacoes:empresa.recomendacoes},
         {upsert:true}, function(err, doc){
           if (err)
            return res.send(500, { error: err });
-          return res.send("succesfully saved");
+
+        Users.find({"carteira.id_empresa":new mongo.ObjectId(id)}).lean().exec(function (errr,users){
+            var t=[];
+            users.forEach((user)=>{
+                t.push(user.idNotification);
+            });
+            var ticker="";
+            var alvo="";
+           
+            rec.dados_recomendacao.forEach((item)=>{
+                if(item.label.toLowerCase()=="ticker")
+                ticker=item.values.toUpperCase();                
+                if(item.label.toLowerCase()=="alvo")
+                alvo="alvo R$ "+getCurrencyMode(item.values);
+            });
+            enviaNotificacao(t, ticker+alvo ,  rec.recomendacao);
+            return res.send("succesfully saved");
+            });
         });
     });
     
@@ -58,8 +80,10 @@ router.get('/', function(req, res) {
    Empresas.find({_id: new mongo.ObjectID(idEmpresa)}).lean().exec(
        function (i,emps){
         var lista=[];
+        var respondido=false;
         if(emps.length==0){
             res.send([]);
+            respondido=true;
             return;
         }
             
@@ -84,6 +108,7 @@ router.get('/', function(req, res) {
                lista.push(reco);
                if(id!=undefined && reco.id.toString()==id){
                     res.status(200).send([reco]);
+                    respondido=true;
                     return;
                }  
             }             
@@ -102,8 +127,10 @@ router.get('/', function(req, res) {
                     })
                });
                 res.status(200).send(l);
+                respondido=true;
                 return;
            }
+           if(!respondido)
            res.status(200).send(lista);
        }
    );
@@ -122,5 +149,26 @@ function getDataFormatada(valor){
     var data=valor;//.toISOString().substr(0,10);
     return data.substr(6,2)+"/"+data.substr(4,2)+"/"+data.substr(0,4)
 }
+function enviaNotificacao(tokens, msg, title){
+    var message = {       
+        notification:{
+          title : title,
+          body : msg
+        }
+      };
+      FCM.sendToMultipleToken(message, tokens, function(err, response) {
+          if(err){
+              console.log('err--', err);
+          }else {
+              console.log('response-----', response);
+          }
+       
+      })
+}
+   
+
+ 
+
+
 module.exports = router;
 

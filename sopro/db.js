@@ -22,7 +22,7 @@ var empresasSchema = new mongoose.Schema({
 
 var usersSchema = new mongoose.Schema({
    _id:Schema.Types.ObjectId,
-   id_notification: String,
+   idNotification: String,
    email:String,
    token: String,
    senha: String,
